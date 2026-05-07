@@ -1,4 +1,4 @@
-module MyService
+module myservice
 
 go 1.25.0
 
