@@ -4,12 +4,21 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5"
-	"myservice/internal/models"
+	"myservice/internal/domain"
 )
 
-func Initusertable(ctx context.Context, conn pgx.Conn) error {
+type UserRepo struct {
+	conn *pgx.Conn
+}
 
-	_, err := conn.Exec(ctx,
+func NewDatabaseConn(conn pgx.Conn) (*UserRepo, error) {
+	return &UserRepo{conn: &conn}, nil
+}
+
+// TODO: гусь
+func (ur *UserRepo) InitUserTable(ctx context.Context) error {
+
+	_, err := ur.conn.Exec(ctx,
 		"CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name VARCHAR(100), createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
 	if err != nil {
 		return fmt.Errorf("cannot init table: %w", err)
@@ -19,8 +28,8 @@ func Initusertable(ctx context.Context, conn pgx.Conn) error {
 	return nil
 }
 
-func Inserteuser(ctx context.Context, conn pgx.Conn, name string) error {
-	_, err := conn.Exec(
+func (ur *UserRepo) InsertUser(ctx context.Context, name string) error {
+	_, err := ur.conn.Exec(
 		ctx,
 		"INSERT INTO users (name) VALUES ($1)",
 		name,
@@ -32,8 +41,8 @@ func Inserteuser(ctx context.Context, conn pgx.Conn, name string) error {
 	return nil
 }
 
-func Deleteuser(ctx context.Context, conn pgx.Conn, id int) error {
-	_, err := conn.Exec(
+func (ur *UserRepo) DeleteUser(ctx context.Context, id int) error {
+	_, err := ur.conn.Exec(
 		ctx,
 		"DELETE FROM users WHERE id=$1", id)
 	if err != nil {
@@ -42,8 +51,8 @@ func Deleteuser(ctx context.Context, conn pgx.Conn, id int) error {
 	return nil
 }
 
-func Updateuser(ctx context.Context, conn pgx.Conn, id int, name string) error {
-	_, err := conn.Exec(
+func (ur *UserRepo) UpdateUser(ctx context.Context, id int, name string) error {
+	_, err := ur.conn.Exec(
 		ctx,
 		"UPDATE users SET name=$1 WHERE id=$2", name, id)
 	if err != nil {
@@ -52,11 +61,11 @@ func Updateuser(ctx context.Context, conn pgx.Conn, id int, name string) error {
 	return nil
 }
 
-func GetUser(ctx context.Context, conn pgx.Conn, id int) (models.UsersModel, error) {
+func (ur *UserRepo) GetUser(ctx context.Context, id int) (domain.Users, error) {
 
-	var res models.UsersModel
+	var res domain.Users
 
-	rows, err := conn.Query(
+	rows, err := ur.conn.Query(
 		ctx,
 		"SELECT id, name, createdat FROM users WHERE id = $1",
 		id,
@@ -71,7 +80,7 @@ func GetUser(ctx context.Context, conn pgx.Conn, id int) (models.UsersModel, err
 		err := rows.Scan(
 			&res.Id,
 			&res.Name,
-			&res.CreatedAt,
+			&res.Created_at,
 		)
 		if err != nil {
 			return res, fmt.Errorf("cannot scan row: %w", err)

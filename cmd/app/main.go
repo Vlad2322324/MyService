@@ -8,6 +8,7 @@ import (
 	"log"
 	"myservice/internal/database"
 	"myservice/internal/repositories"
+	"myservice/internal/services"
 	"os"
 )
 
@@ -19,21 +20,32 @@ func main() {
 		log.Fatalf("Error loading .env file %v\n", err)
 	}
 
-	conn := database.DBconnect(ctx, os.Getenv("DATABASE_URL"))
-
-	if err := repositories.Initusertable(ctx, *conn); err != nil {
+	conn, err := database.DBconnect(ctx, os.Getenv("DATABASE_URL"))
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	//if err := repositories.Inserteuser(ctx, *conn, "фафыа"); err != nil {
+	userRepo, _ := repositories.NewDatabaseConn(*conn)
+
+	if err := userRepo.InitUserTable(ctx); err != nil {
+		log.Fatal(err)
+	}
+
+	userService, _ := services.NewUserService(userRepo)
+
+	userService.CreatetUser(ctx, "SDAASD")
+	fmt.Println(userService.GetUser(ctx, 1))
+	fmt.Println(userService.GetUser(ctx, 2))
+	fmt.Println(userService.GetUser(ctx, 3))
+	//if err := repositories.InsertUser(ctx, *conn, "фафыа"); err != nil {
 	//	fmt.Print(fmt.Errorf("%w", err))
 	//}
 
-	//if err := repositories.Updateuser(ctx, *conn, 2, "aaaa"); err != nil {
+	//if err := repositories.UpdateUser(ctx, *conn, 2, "aaaa"); err != nil {
 	//	fmt.Print(fmt.Errorf("%w", err))
 	//}
 
-	//repositories.Deleteuser(ctx, *conn, 1)
+	//repositories.DeleteUser(ctx, *conn, 1)
 
-	fmt.Print(repositories.GetUser(ctx, *conn, 2))
+	//fmt.Print(repositories.GetUser(ctx, *conn, 2))
 }
