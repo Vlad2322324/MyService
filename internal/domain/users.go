@@ -3,7 +3,7 @@ package domain
 import "time"
 
 type Users struct {
-	Id         int       `json:"id"`
-	Name       string    `json:"name"`
-	Created_at time.Time `json:"created_at"`
+	ID        int       `json:"id" db:"id"`
+	Name      string    `json:"name" db:"name"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }

@@ -61,7 +61,7 @@ func (ur *UserRepo) UpdateUser(ctx context.Context, id int, name string) error {
 	return nil
 }
 
-func (ur *UserRepo) GetUser(ctx context.Context, id int) (domain.Users, error) {
+func (ur *UserRepo) GetUserById(ctx context.Context, id int) (domain.Users, error) {
 
 	var res domain.Users
 
@@ -78,9 +78,9 @@ func (ur *UserRepo) GetUser(ctx context.Context, id int) (domain.Users, error) {
 	for rows.Next() {
 
 		err := rows.Scan(
-			&res.Id,
+			&res.ID,
 			&res.Name,
-			&res.Created_at,
+			&res.CreatedAt,
 		)
 		if err != nil {
 			return res, fmt.Errorf("cannot scan row: %w", err)
