@@ -19,7 +19,7 @@ func NewDatabaseConn(conn pgx.Conn) (*UserRepo, error) {
 func (ur *UserRepo) InitUserTable(ctx context.Context) error {
 
 	_, err := ur.conn.Exec(ctx,
-		"CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name VARCHAR(100), createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+		"CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name VARCHAR(100), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
 	if err != nil {
 		return fmt.Errorf("cannot init table: %w", err)
 

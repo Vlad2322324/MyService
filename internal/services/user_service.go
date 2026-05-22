@@ -14,7 +14,7 @@ func NewUserService(ur *repositories.UserRepo) (*UserService, error) {
 	return &UserService{ur: ur}, nil
 }
 
-func (us *UserService) CreatetUser(ctx context.Context, name string) error {
+func (us *UserService) CreateUser(ctx context.Context, name string) error {
 	// FIXME
 	return us.ur.InsertUser(ctx, name)
 }
@@ -28,5 +28,5 @@ func (ur *UserService) UpdateUser(ctx context.Context, id int, name string) erro
 }
 
 func (ur *UserService) GetUser(ctx context.Context, id int) (domain.Users, error) {
-	return ur.ur.GetUser(ctx, id)
+	return ur.ur.GetUserById(ctx, id)
 }

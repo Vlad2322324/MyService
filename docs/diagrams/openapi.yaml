@@ -2,7 +2,7 @@ openapi: 3.0.3
 
 info:
   title: MyService API
-  description: хз че делает пока
+  description: API для работы с пользователями
   version: 1.0.0
 
 servers:
@@ -22,18 +22,25 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/User'
+              $ref: '#/components/schemas/CreateUserRequest'
 
       responses:
         '200':
-          description: Пользователь создан
+          description: Пользователь успешно создан
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
 
-        'default':
-          description: Ошибка
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '500':
+          description: Внутренняя ошибка сервера
           content:
             application/json:
               schema:
@@ -53,25 +60,33 @@ paths:
           description: ID пользователя
           schema:
             type: integer
+            minimum: 1
             example: 1
 
       responses:
         '200':
-          description: Успешный ответ
+          description: Пользователь найден
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
 
-        'default':
-          description: Ошибка
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '500':
+          description: Внутренняя ошибка сервера
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
 
     put:
-      summary: Полное обновление пользователя
+      summary: Обновить пользователя
       tags:
         - user
       operationId: UpdateUser
@@ -83,6 +98,7 @@ paths:
           description: ID пользователя
           schema:
             type: integer
+            minimum: 1
             example: 1
 
       requestBody:
@@ -90,18 +106,32 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/User'
+              $ref: '#/components/schemas/UpdateUserRequest'
 
       responses:
         '200':
-          description: Пользователь обновлён
+          description: Пользователь успешно обновлён
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
 
-        'default':
-          description: Ошибка
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '500':
+          description: Внутренняя ошибка сервера
           content:
             application/json:
               schema:
@@ -120,14 +150,22 @@ paths:
           description: ID пользователя
           schema:
             type: integer
+            minimum: 1
             example: 1
 
       responses:
-        '200':
-          description: Успешное удаление
+        '204':
+          description: Пользователь успешно удалён
 
-        'default':
-          description: Ошибка
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '500':
+          description: Внутренняя ошибка сервера
           content:
             application/json:
               schema:
@@ -145,13 +183,37 @@ components:
         id:
           type: integer
           example: 1
+
         name:
           type: string
-          example: "John Doe"
+          example: John Doe
+
         createdAt:
           type: string
           format: date-time
           example: "2026-05-21T12:34:56Z"
+
+    CreateUserRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: John Doe
+
+    UpdateUserRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          example: Updated Name
 
     Error:
       type: object
@@ -161,5 +223,8 @@ components:
       properties:
         code:
           type: integer
+          example: 404
+
         message:
           type: string
+          example: User not found
