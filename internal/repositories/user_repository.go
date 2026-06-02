@@ -28,33 +28,34 @@ func (ur *UserRepo) InitUserTable(ctx context.Context) error {
 	return nil
 }
 
-func (ur *UserRepo) InsertUser(ctx context.Context, name string) error {
-	_, err := ur.conn.Exec(
+func (ur *UserRepo) InsertUser(ctx context.Context, name string) (*domain.Users, error) {
+	var user domain.Users
+	err := ur.conn.QueryRow(
 		ctx,
-		"INSERT INTO users (name) VALUES ($1)",
+		"INSERT INTO users (name) VALUES ($1) RETURNING id, name, createdat",
 		name,
-	)
+	).Scan(&user.ID, &user.Name, &user.CreatedAt)
 	if err != nil {
-		return fmt.Errorf("cannot INSERT in table: %w", err)
-
+		return nil, fmt.Errorf("cannot INSERT in table: %w", err)
 	}
-	return nil
+	return &user, nil
 }
 
-func (ur *UserRepo) DeleteUser(ctx context.Context, id int) error {
-	_, err := ur.conn.Exec(
+func (ur *UserRepo) DeleteUser(ctx context.Context, id int) (int64, error) {
+	tag, err := ur.conn.Exec(
 		ctx,
 		"DELETE FROM users WHERE id=$1", id)
 	if err != nil {
-		return fmt.Errorf("cannot DELETE: %w", err)
+		return 0, fmt.Errorf("cannot DELETE: %w", err)
 	}
-	return nil
+	return tag.RowsAffected(), nil
 }
 
 func (ur *UserRepo) UpdateUser(ctx context.Context, id int, name string) error {
 	_, err := ur.conn.Exec(
 		ctx,
 		"UPDATE users SET name=$1 WHERE id=$2", name, id)
+
 	if err != nil {
 		return fmt.Errorf("cannot UPDATE: %w", err)
 	}
@@ -62,33 +63,20 @@ func (ur *UserRepo) UpdateUser(ctx context.Context, id int, name string) error {
 }
 
 func (ur *UserRepo) GetUserById(ctx context.Context, id int) (domain.Users, error) {
-
 	var res domain.Users
 
-	rows, err := ur.conn.Query(
+	err := ur.conn.QueryRow(
 		ctx,
 		"SELECT id, name, createdat FROM users WHERE id = $1",
 		id,
+	).Scan(
+		&res.ID,
+		&res.Name,
+		&res.CreatedAt,
 	)
+
 	if err != nil {
-		return res, fmt.Errorf("cannot SELECT: %w", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-
-		err := rows.Scan(
-			&res.ID,
-			&res.Name,
-			&res.CreatedAt,
-		)
-		if err != nil {
-			return res, fmt.Errorf("cannot scan row: %w", err)
-		}
-	}
-
-	if err := rows.Err(); err != nil {
-		return res, fmt.Errorf("rows error: %w", err)
+		return res, err
 	}
 
 	return res, nil
