@@ -26,6 +26,8 @@ jobs:
             ${{ runner.os }}-go-
       - name: Install oapi-codegen
         run: go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@latest
+      - name: Ensure generated directory exists
+        run: mkdir -p internal/api/generated
       - name: Codegen
         run: ~/go/bin/oapi-codegen --config openapi/oapi-codegen.yaml openapi/openapi.yaml
       - name: Go vet

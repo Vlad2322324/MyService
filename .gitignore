@@ -10,8 +10,12 @@
 bin/
 *.exe
 
-# Generated API (oapi-codegen)
-internal/api/
+# Generated API (oapi-codegen) — ignore generated .go files but keep structure
+internal/api/*
+!internal/api/generated/
+internal/api/generated/*
+!internal/api/generated/.gitkeep
+!internal/api/generated/.gitignore
 
 # Editor/IDE
 .vscode/
