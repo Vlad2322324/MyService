@@ -9,9 +9,15 @@ import (
 	api "myservice/internal/api/generated"
 	"myservice/internal/database"
 	"myservice/internal/handlers/user_handler"
+	"myservice/internal/middleware"
 	"myservice/internal/repositories"
 	"myservice/internal/services"
+	"myservice/pkg/logger"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
@@ -56,32 +62,54 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Сначала загружаем .env чтобы переменные окружения были доступны
 	if err := godotenv.Load(); err != nil {
-		log.Fatalf("Error loading .env file %v\n", err)
+		// не фатальная ошибка — .env может отсутствовать в production
+		log.Printf("Warning: could not load .env file: %v", err)
 	}
+
+	// Инициализация логгера (читает ENV из окружения)
+	if err := logger.Init(); err != nil {
+		log.Fatalf("failed to init logger: %v", err)
+	}
+	defer logger.Sync()
+
+	logger.Log.Infof("logger initialized (ENV=%s)", os.Getenv("ENV"))
 
 	conn, err := database.DBconnect(ctx, os.Getenv("DATABASE_URL"))
 	if err != nil {
-		log.Fatal(err)
+		logger.Log.Fatalf("database connect error: %v", err)
 	}
 
-	repo, _ := repositories.NewDatabaseConn(*conn)
+	repo, _ := repositories.NewDatabaseConn(conn)
+
+	// Инициализация таблицы users если нужно
+	if err := repo.InitUserTable(ctx); err != nil {
+		logger.Log.Fatalf("failed to init users table: %v", err)
+	}
 
 	service, err := services.NewUserService(repo)
 	if err != nil {
-		log.Fatal(err)
+		logger.Log.Fatalf("service init error: %v", err)
 	}
 
 	handler := user_handler.NewUserHandler(service)
 
 	e := echo.New()
+	// Request ID middleware (X-Request-ID)
+	e.Use(middleware.RequestID)
+	// Логируем метод и путь запроса (может использовать request_id из контекста)
 	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			// Логируем метод и путь запроса
 			method := c.Request().Method
 			path := c.Request().URL.Path
-			println("Новый запрос:", method, path)
-			return next(c) // Передаем управление следующему обработчику
+			rid, _ := c.Get("request_id").(string)
+			if rid != "" {
+				logger.Log.Infof("Новый запрос: %s %s request_id=%s", method, path, rid)
+			} else {
+				logger.Log.Infof("Новый запрос: %s %s", method, path)
+			}
+			return next(c)
 		}
 	})
 
@@ -90,6 +118,33 @@ func main() {
 		api.NewStrictHandler(handler, nil),
 	)
 
-	e.Logger.Fatal(e.Start(":8080"))
+	// Start server in goroutine
+	go func() {
+		if err := e.Start(":8081"); err != nil && err != http.ErrServerClosed {
+			logger.Log.Fatalf("server start error: %v", err)
+		}
+	}()
+
+	// Use NotifyContext to listen for interrupt/terminate signals and support graceful shutdown
+	sigCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	// Block until a signal is received
+	<-sigCtx.Done()
+	logger.Log.Infof("shutdown signal received")
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+
+	if err := e.Shutdown(shutdownCtx); err != nil {
+		logger.Log.Errorf("error during server shutdown: %v", err)
+	}
+
+	// Close DB connection
+	if conn != nil {
+		if err := conn.Close(shutdownCtx); err != nil {
+			logger.Log.Warnf("error closing db connection: %v", err)
+		}
+	}
 
 }

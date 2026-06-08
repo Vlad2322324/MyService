@@ -1,2 +1,37 @@
-.idea
+
+# JetBrains
+.idea/
+
+# Environment
 .env
+.env.local
+
+# Binaries
+bin/
+*.exe
+
+# Generated API (oapi-codegen) — ignore generated .go files but keep structure
+internal/api/*
+!internal/api/generated/
+internal/api/generated/*
+!internal/api/generated/.gitkeep
+!internal/api/generated/.gitignore
+
+# Editor/IDE
+.vscode/
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# MCP / tooling
+.ai-factory.json
+.mcp/
+
+# Other
+vendor/
+
