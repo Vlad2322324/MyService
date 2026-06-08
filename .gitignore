@@ -1,2 +1,33 @@
-.idea
+
+# JetBrains
+.idea/
+
+# Environment
 .env
+.env.local
+
+# Binaries
+bin/
+*.exe
+
+# Generated API (oapi-codegen)
+internal/api/
+
+# Editor/IDE
+.vscode/
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# MCP / tooling
+.ai-factory.json
+.mcp/
+
+# Other
+vendor/
+
