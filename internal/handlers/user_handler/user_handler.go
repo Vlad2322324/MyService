@@ -3,10 +3,10 @@ package user_handler
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/jackc/pgx/v5"
 	api "myservice/internal/api/generated"
 	"myservice/internal/services"
+	"myservice/pkg/logger"
 )
 
 type UserHandler struct {
@@ -22,7 +22,7 @@ func NewUserHandler(us *services.UserService) *UserHandler {
 // compile-time проверка
 //var _ openapi.ServerInterface = (*UserHandler)(nil)
 
-// GET /user/{id}
+// GetUserById GET /user/{id}
 func (h *UserHandler) GetUserById(
 	ctx context.Context,
 	request api.GetUserByIdRequestObject,
@@ -36,6 +36,7 @@ func (h *UserHandler) GetUserById(
 		}, nil
 	}
 	if err != nil {
+		logger.Log.Errorf("GetUserById error: %v", err)
 		return api.GetUserById500JSONResponse{
 			Code:    500,
 			Message: "Internal error",
@@ -50,7 +51,7 @@ func (h *UserHandler) GetUserById(
 
 }
 
-// POST /user
+// InsertUser POST /user
 func (h *UserHandler) InsertUser(
 	ctx context.Context,
 	request api.InsertUserRequestObject,
@@ -70,8 +71,8 @@ func (h *UserHandler) InsertUser(
 		}, nil
 	}
 	user, err := h.us.CreateUser(ctx, request.Body.Name)
-	fmt.Print(err)
 	if err != nil {
+		logger.Log.Errorf("InsertUser error: %v", err)
 		return api.InsertUser500JSONResponse{
 			Code:    500,
 			Message: "Internal error",
@@ -85,7 +86,7 @@ func (h *UserHandler) InsertUser(
 	}, nil
 }
 
-// POST /user
+// UpdateUser POST /user
 func (h *UserHandler) UpdateUser(
 	ctx context.Context,
 	request api.UpdateUserRequestObject,
@@ -107,6 +108,7 @@ func (h *UserHandler) UpdateUser(
 
 	err := h.us.UpdateUser(ctx, request.Id, request.Body.Name)
 	if err != nil {
+		logger.Log.Errorf("UpdateUser error: %v", err)
 		return api.UpdateUser500JSONResponse{
 			Code:    500,
 			Message: "Internal error",
@@ -114,6 +116,7 @@ func (h *UserHandler) UpdateUser(
 	}
 	user, err := h.us.GetUser(ctx, request.Id)
 	if err != nil {
+		logger.Log.Warnf("GetUser after update not found: %v", err)
 		return api.UpdateUser404JSONResponse{
 			Code:    404,
 			Message: "User not found",
@@ -143,6 +146,7 @@ func (h *UserHandler) DeleteUser(
 	}
 
 	if err != nil {
+		logger.Log.Errorf("DeleteUser error: %v", err)
 		return api.DeleteUser500JSONResponse{
 			Code:    500,
 			Message: "Internal error",
