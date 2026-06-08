@@ -1,137 +1,98 @@
 # MyService
 
-Короткое описание
+> REST API сервис для управления пользователями на Go
 
-MyService — простой REST-сервис на Go для работы с сущностью "пользователь" (Users). Проект использует Echo для HTTP-сервера, pgx для подключения к PostgreSQL и сгенерированные хендлеры из OpenAPI спецификации в `openapi/openapi.yaml`.
+Простой, масштабируемый REST-сервис на Go с использованием Echo, PostgreSQL и OpenAPI. Проект демонстрирует лучшие практики: структурированное логирование, graceful shutdown, миграции БД и CI/CD.
 
-Чеклист (что в этом README):
+## Быстрый старт
 
-- Описание проекта
-- Требования и зависимости
-- Быстрый старт (сборка и запуск)
-- Конфигурация окружения
-- Работа с базой данных / миграции
-- Генерация серверных хендлеров из OpenAPI
-- Примеры запросов
-- Структура проекта
+**Требования:** Go 1.23+, PostgreSQL, oapi-codegen
 
-Требования
+```bash
+# Клонировать репозиторий
+git clone <repo-url>
+cd MyService
 
-- Go 1.20+ (или версия, указанная в go.mod)
-- make (Makefile) — для удобных команд (на Windows можно использовать mingw/msys, WSL или просто выполнять команды вручную в PowerShell)
-- PostgreSQL
-- oapi-codegen — требуется для генерации API (Makefile вызывает `oapi-codegen`)
+# Установить зависимости
+go mod download
 
-Установка oapi-codegen (если ещё не установлен)
-
-PowerShell / Windows (scoop/choco) пример:
-
-```powershell
-# через scoop
-scoop install oapi-codegen
-
-# через go (если не установлен бинарник):
+# Установить oapi-codegen
 go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@latest
+
+# Скопировать .env.example в .env и заполнить DATABASE_URL
+cp .env.example .env
+
+# Собрать и запустить
+.\scripts\build.ps1
+.\scripts\run.ps1
 ```
 
-Быстрый старт
+## Ключевые возможности
 
-1) Создайте файл с переменными окружения `.env` в корне проекта (или установите переменную `DATABASE_URL`). Пример содержимого:
+- **OpenAPI-first**: спецификация → код через oapi-codegen
+- **Структурированное логирование**: zap с поддержкой уровней (debug/info/warn/error)
+- **Request tracking**: X-Request-ID middleware для отслеживания запросов
+- **Миграции БД**: golang-migrate + SQL-скрипты в `migrations/`
+- **Graceful shutdown**: корректное завершение при SIGINT/SIGTERM
+- **CI/CD**: GitHub Actions (codegen, vet, test, build)
 
-```
-DATABASE_URL=postgres://postgres:password@localhost:5432/mydb?sslmode=disable
-```
+## Примеры
 
-2) Собрать и запустить приложение (Makefile автоматически вызовет `oapi-codegen`):
+```bash
+# Создать пользователя
+curl -X POST http://localhost:8081/user \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Alice"}'
 
-PowerShell:
+# Получить пользователя
+curl http://localhost:8081/user/1
 
-```powershell
-# Сборка
-make build
+# Обновить пользователя
+curl -X PUT http://localhost:8081/user/1 \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Alice Updated"}'
 
-# Запуск
-make run
-```
-
-Альтернатива: запустить напрямую через go
-
-```powershell
-# сгенерировать код (если нужно)
-make codegen
-
-# собрать и запустить без Makefile
-go build -o bin/myapp.exe ./cmd/app/main.go
-.
-bin\myapp.exe
-
-# или
-go run ./cmd/app/main.go
+# Удалить пользователя
+curl -X DELETE http://localhost:8081/user/1
 ```
 
-Конфигурация базы данных
+---
 
-Приложение ожидает переменную окружения `DATABASE_URL` в формате PostgreSQL URI, например:
+## Документация
 
-postgres://user:password@localhost:5432/dbname?sslmode=disable
+| Раздел | Описание |
+|--------|---------|
+| [Начало работы](docs/getting-started.md) | Установка, требования, первый запуск |
+| [Архитектура](docs/architecture.md) | Структура проекта, компоненты, взаимодействие |
+| [API Reference](docs/api-reference.md) | Endpoints, запросы, ответы, коды ошибок |
+| [Конфигурация](docs/configuration.md) | Переменные окружения, файлы конфигурации |
+| [Разработка](docs/development.md) | Логирование, миграции, middleware, тестирование |
 
-Если БД пуста, можно создать таблицу вручную (SQL):
+## Стек технологий
 
-```sql
-CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(100),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+- **Go 1.23** — язык программирования
+- **Echo v4** — HTTP framework
+- **pgx v5** — PostgreSQL драйвер
+- **zap** — структурированное логирование
+- **oapi-codegen** — генерация API из OpenAPI
+- **golang-migrate** — управление миграциями
+
+## Запуск тестов
+
+```bash
+go test ./... -v
+go vet ./...
 ```
 
-В текущем коде есть метод `InitUserTable` в `internal/repositories`, который выполняет создание таблицы — его можно вызвать из `main` или из отдельного инструмента миграции.
+## Лицензия
 
-Генерация OpenAPI-кода
+MIT — см. [LICENSE](LICENSE)
 
-Спецификация находится в `openapi/openapi.yaml`. Makefile содержит цель `codegen`, которая использует `openapi/oapi-codegen.yaml` + `oapi-codegen` для генерации серверной обвязки в `internal/api/generated`.
+## Больше информации
 
-Примеры запросов
-
-После запуска сервис слушает порт 8080 (в `cmd/app/main.go` указано `:8080`). Примеры (PowerShell / curl):
-
-Создать пользователя:
-
-```powershell
-curl -X POST http://localhost:8080/user -H "Content-Type: application/json" -d '{"name":"John Doe"}'
-```
-
-Получить пользователя по id:
-
-```powershell
-curl http://localhost:8080/user/1
-```
-
-Обновить пользователя:
-
-```powershell
-curl -X PUT http://localhost:8080/user/1 -H "Content-Type: application/json" -d '{"name":"Updated Name"}'
-```
-
-Удалить пользователя:
-
-```powershell
-curl -X DELETE http://localhost:8080/user/1
-```
-
-Структура проекта (важные директории)
-
-- `cmd/app` — точка входа `main.go`.
-- `internal/api/generated` — сгенерированные хендлеры и типы (oapi-codegen).
-- `internal/database` — подключение к БД (`postgres.go`).
-- `internal/repositories` — слой доступа к данным (`user_repository.go`).
-- `internal/services` — бизнес-логика (`user_service.go`).
-- `internal/handlers` — реализация HTTP-хендлеров поверх сгенерированного API.
-- `openapi` — спецификация OpenAPI и конфиг для oapi-codegen.
-- `migrations` — место для миграций (пока может быть пустым).
-- `pkg/logger` — пакет логирования.
-- `Makefile` — удобные команды для сборки, запуска, генерации кода и миграций.
-- `.env` — файл для переменных окружения (не в репозитории, должен быть создан локально).
+- 📖 [GitHub](https://github.com/yourusername/MyService)
+- 🐛 [Issues](https://github.com/yourusername/MyService/issues)
+- 💬 [Discussions](https://github.com/yourusername/MyService/discussions)
 
 
 
